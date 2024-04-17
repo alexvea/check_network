@@ -18,13 +18,24 @@ Help()
 }
 set -e
 DESTINATION=""
-SUDO_CMD="/usr/bin/env sudo -u ssh_user"
+ENV_CMD="/usr/bin/env"
+SUDO_CMD="$ENV_CMD sudo -u ssh_user"
 SSH_CMD=""
-NETSTAT_CMD="/usr/bin/env netstat"
-IP_CMD="/usr/bin/env ip a"
-AWK_CMD="/usr/bin/env awk"
-PING_CMD="/usr/bin/env ping -c 1 -W 1"
-NC_CMD="/usr/bin/env nc"
+NETSTAT_CMD="$ENV_CMD netstat"
+IP_CMD="$ENV_CMD ip a"
+AWK_CMD="$ENV_CMD awk"
+PING_CMD="$ENV_CMD ping -c 1 -W 1"
+NC_CMD="$ENV_CMD nc"
+
+
+#color
+RED=$'\033[0;31m'
+NC=$'\033[0m' # No Color
+GREEN=$'\033[0;32m'
+YELLOW=$'\033[1;33m'
+BLUE=$'\033[0;34m'
+PURPLE=$'\033[0;35m'
+WHITE=$'\033[1;37m'
 
 while getopts "hdH:D:P:p:" option; do
    case $option in
@@ -64,13 +75,25 @@ function create_listen_port {
         F_PORT=$3
         [[ $DESTINATION == "$(localhost_to_primary_ip)" ]] && F_SSH_CMD="$SUDO_CMD"
         [[ "$F_PROTOCOL" =~ ^(ICMP|icmp)$ ]] && DST_FILTER="$F_PROTOCOL" || DST_FILTER="dst port $F_PORT and $F_PROTOCOL"
-        sleep 1 && $SSH_CMD $CHECK_CMD $DESTINATION $PORT 2> /dev/null &
-        result=$($F_SSH_CMD sudo tcpdump -c 1 -n src host $HOST and $DST_FILTER 2> /dev/null && echo ok)
-        echo $result
+        sleep 1 && $SSH_CMD $CHECK_CMD $DESTINATION $PORT > /dev/null &
+        result_tcpdump=$($F_SSH_CMD sudo tcpdump -c 1 -n src host $HOST and $DST_FILTER 2> /dev/null && echo ok)
 }
 
 function localhost_to_primary_ip {
         echo $(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1')
+}
+
+function display_result {
+        F_result_network_flow=$1
+        F_result_tcpdump=$2
+        F_result_port=$3
+        F_result_ping=$4
+        if [[ ! -z "$F_result_tcpdump" ]] || [[ "$F_result_network_flow" =~ (1 received|Connected to) ]] || [[ ! -z "$F_result_port" ]] || [[ "$F_result_ping" =~ (1 received) ]]; then
+
+                [[ ! -z $DESTINATION ]] && echo -e "$HOST>$DESTINATION/$PROTOCOL:$PORT ${GREEN}OK${NC}" || echo -e "$HOST/$PROTOCOL:$PORT ${GREEN}OK${NC}"
+        else
+                [[ ! -z $DESTINATION ]] && echo -e "$HOST>$DESTINATION/$PROTOCOL:$PORT ${RED}NOK${NC}" || echo -e "$HOST/$PROTOCOL:$PORT ${RED}NOK${NC}"
+        fi
 }
 
 if check_if_host_is_local $HOST; then
@@ -93,18 +116,23 @@ if [[ ! -z $DESTINATION ]] ; then
                 TCP|tcp)
                 #remote 10.25.12.240>10.25.15.133 tcp 22
                 # sudo -u ssh_user ssh 'ssh_user@10.25.12.240' "nc -vz 10.25.15.133 22"
-                CHECK_CMD="$NC_CMD -vz"
+                CHECK_CMD="$NC_CMD -z"
                 ;;
                 UDP|udp)
                 #remote 10.25.12.240>10.25.15.133 udp 161
                 # sudo -u ssh_user ssh 'ssh_user@10.25.12.240' "nc -vz -u 10.25.15.133 161"
-                CHECK_CMD="$NC_CMD -vz -u"
+                CHECK_CMD="$NC_CMD -z -u"
                 ;;
         esac
-        $SSH_CMD $CHECK_CMD $DESTINATION $PORT || create_listen_port $DESTINATION $PROTOCOL $PORT
+        result_network_flow=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 /dev/null) || create_listen_port $DESTINATION $PROTOCOL $PORT
 else
         #cas check port remote
         #cas tcp/udp sudo -u ssh_user ssh ssh_user@10.25.12.240 /usr/bin/env netstat -tulan | awk  '$1 ~ "udp" && $4 ~ /(0.0.0.0:68|:::68|10.25.12.240:68)/ && $5 ~ /(0.0.0.0:*|:::*)/'
-        [[ "$PROTOCOL" =~ ^(ICMP|icmp)$ ]] && $SSH_CMD $PING_CMD $HOST || $SSH_CMD $NETSTAT_CMD -tulan | $AWK_CMD -v proto="$PROTOCOL" -v host="$HOST" -v port="$PORT"$ '$1 ~ proto && $4 ~ ("0.0.0.0:"port"|:::"port"|"host":"port) && $5 ~ ("0.0.0.0:*|:::*")' 
+        [[ "$PROTOCOL" =~ ^(ICMP|icmp)$ ]] && result_ping=$($SSH_CMD $PING_CMD $HOST) || result_port=`$SSH_CMD $NETSTAT_CMD -tulan | $AWK_CMD -v proto="$PROTOCOL" -v host="$HOST" -v port="$PORT"$ '$1 ~ proto && $4 ~ ("0.0.0.0:"port"|:::"port"|"host":"port) && $5 ~ ("0.0.0.0:*|:::*")'`
 
 fi
+ [[ $DEBUG == 1 ]] && [[ ! -z $result_port ]] && echo "PORT RESULT: " $result_port 
+ [[ $DEBUG == 1 ]] && [[ ! -z $result_ping ]] && echo "PING RESULT: " $result_ping 
+ [[ $DEBUG == 1 ]] && [[ ! -z $result_network_flow ]] && echo "NETFLOW RESULT: " $result_network_flow 
+ [[ $DEBUG == 1 ]] && [[ ! -z $result_tcpdump ]] && echo "TCPDUMP RESULT: "  $result_tcpdump
+display_result "$result_network_flow" "$result_tcpdump" "$result_port" "$result_ping"
