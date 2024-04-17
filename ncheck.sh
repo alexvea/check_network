@@ -16,7 +16,7 @@ Help()
    echo "-p     port"
    echo
 }
-set -e
+#set -e
 DESTINATION=""
 ENV_CMD="/usr/bin/env"
 SUDO_CMD="$ENV_CMD sudo -u ssh_user"
@@ -75,8 +75,8 @@ function create_listen_port {
         F_PORT=$3
         [[ $DESTINATION == "$(localhost_to_primary_ip)" ]] && F_SSH_CMD="$SUDO_CMD"
         [[ "$F_PROTOCOL" =~ ^(ICMP|icmp)$ ]] && DST_FILTER="$F_PROTOCOL" || DST_FILTER="dst port $F_PORT and $F_PROTOCOL"
-        sleep 1 && result_tcpdump_network=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 &)&
-        result_tcpdump=$($F_SSH_CMD sudo tcpdump -c 1 -n src host $HOST and $DST_FILTER 2> /dev/null && echo ok)
+        sleep 1 && result_tcpdump_network=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 &) &
+        result_tcpdump=$(timeout 3 $F_SSH_CMD sudo tcpdump -c 10 -n src host $HOST and $DST_FILTER 2> /dev/null)
 }
 
 function localhost_to_primary_ip {
@@ -88,12 +88,26 @@ function display_result {
         F_result_tcpdump=$2
         F_result_port=$3
         F_result_ping=$4
-        if [[ ! -z "$F_result_tcpdump" ]] || [[ "$F_result_network_flow" =~ (1 received|Connected to) ]] || [[ ! -z "$F_result_port" ]] || [[ "$F_result_ping" =~ (1 received) ]]; then
-
-                [[ ! -z $DESTINATION ]] && echo -e "$HOST>$DESTINATION/$PROTOCOL:$PORT ${GREEN}OK${NC}" || echo -e "$HOST/$PROTOCOL:$PORT ${GREEN}OK${NC}"
-        else
-                [[ ! -z $DESTINATION ]] && echo -e "$HOST>$DESTINATION/$PROTOCOL:$PORT ${RED}NOK${NC}" || echo -e "$HOST/$PROTOCOL:$PORT ${RED}NOK${NC}"
-        fi
+#       if [[ "$F_result_network_flow" =~ (1 received|Connected to|refused) ]] || [[ ! -z "$F_result_port" ]] || [[ ! -z "$F_result_ping" ]]; then
+                [[ "$PROTOCOL" =~ ^(ICMP|icmp)$ ]] && PORT="PONG"
+                if [[ ! -z $F_result_tcpdump ]] || [[ "$F_result_network_flow" =~ (refused) ]] ; then
+                        ARROW="${GREEN}-->${NC}"
+                        PORT_COLOR="${RED}$PORT${NC}"
+                elif [[ "$F_result_network_flow" =~ (1 received|Connected to) ]] || [[ "$F_result_ping" =~ (1 received) ]] || [[ ! -z "$F_result_port" ]]; then
+                        ARROW="${GREEN}-->${NC}"
+                        PORT_COLOR="${GREEN}$PORT${NC}"
+                else
+                        ARROW="${RED}-->${NC}"
+                        PORT_COLOR="${RED}$PORT${NC}"
+                fi
+                if [[ ! -z "$DESTINATION" ]]; then
+                        DESTINATION_CONTENT=$ARROW$DESTINATION
+                else
+                        DESTINATION_CONTENT=""
+                fi
+                PORT_CONTENT=$PORT_COLOR
+                echo -e "$HOST$DESTINATION_CONTENT/$PROTOCOL:$PORT_CONTENT"
+#       fi
 }
 
 if check_if_host_is_local $HOST; then
