@@ -76,7 +76,7 @@ function create_listen_port {
         [[ $DESTINATION == "$(localhost_to_primary_ip)" ]] && F_SSH_CMD="$SUDO_CMD"
         [[ "$F_PROTOCOL" =~ ^(ICMP|icmp)$ ]] && DST_FILTER="$F_PROTOCOL" || DST_FILTER="dst port $F_PORT and $F_PROTOCOL"
         sleep 1 && result_tcpdump_network=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 &) &
-        result_tcpdump=$(timeout 3 $F_SSH_CMD sudo tcpdump -c 10 -n src host $HOST and $DST_FILTER 2> /dev/null)
+        result_tcpdump=$(timeout 3 $F_SSH_CMD sudo tcpdump -c 1 -n src host $HOST and $DST_FILTER 2> /dev/null)
 }
 
 function localhost_to_primary_ip {
