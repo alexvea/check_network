@@ -75,7 +75,7 @@ function create_listen_port {
         F_PORT=$3
         [[ $DESTINATION == "$(localhost_to_primary_ip)" ]] && F_SSH_CMD="$SUDO_CMD"
         [[ "$F_PROTOCOL" =~ ^(ICMP|icmp)$ ]] && DST_FILTER="$F_PROTOCOL" || DST_FILTER="dst port $F_PORT and $F_PROTOCOL"
-        sleep 1 && $SSH_CMD $CHECK_CMD $DESTINATION $PORT > /dev/null &
+        sleep 1 && result_tcpdump_network=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 &)&
         result_tcpdump=$($F_SSH_CMD sudo tcpdump -c 1 -n src host $HOST and $DST_FILTER 2> /dev/null && echo ok)
 }
 
@@ -116,15 +116,15 @@ if [[ ! -z $DESTINATION ]] ; then
                 TCP|tcp)
                 #remote 10.25.12.240>10.25.15.133 tcp 22
                 # sudo -u ssh_user ssh 'ssh_user@10.25.12.240' "nc -vz 10.25.15.133 22"
-                CHECK_CMD="$NC_CMD -z"
+                CHECK_CMD="$NC_CMD -vz"
                 ;;
                 UDP|udp)
                 #remote 10.25.12.240>10.25.15.133 udp 161
                 # sudo -u ssh_user ssh 'ssh_user@10.25.12.240' "nc -vz -u 10.25.15.133 161"
-                CHECK_CMD="$NC_CMD -z -u"
+                CHECK_CMD="$NC_CMD -vz -u"
                 ;;
         esac
-        result_network_flow=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 /dev/null) || create_listen_port $DESTINATION $PROTOCOL $PORT
+        result_network_flow=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 ) || create_listen_port $DESTINATION $PROTOCOL $PORT
 else
         #cas check port remote
         #cas tcp/udp sudo -u ssh_user ssh ssh_user@10.25.12.240 /usr/bin/env netstat -tulan | awk  '$1 ~ "udp" && $4 ~ /(0.0.0.0:68|:::68|10.25.12.240:68)/ && $5 ~ /(0.0.0.0:*|:::*)/'
