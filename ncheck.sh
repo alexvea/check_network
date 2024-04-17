@@ -61,6 +61,7 @@ function check_network_flow {
 }
 
 function check_listen_port {
+        [[ "$2" =~ ^(ICMP|icmp)$ ]] && return 0
         SSH_CMD="sudo -u ssh_user ssh ssh_user@$1"
         #$SSH_CMD $NETSTAT_CMD -tulan | grep $PROTOCOL | egrep "(0.0.0.0:|:::|$HOST:)" | egrep ":$PORT\s" | grep LISTEN
         $SSH_CMD $NETSTAT_CMD -tulan | grep $2 | egrep "(0.0.0.0:|:::|$1:)" | egrep ":$3\s" && return 0 || return 1
