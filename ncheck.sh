@@ -35,8 +35,8 @@ while getopts "hdH:D:P:p:" option; do
       H) #host 
          HOST=("$OPTARG")
          ;;
-      D) #host 
-         DESTINATION=("$OPTARG")
+      D) #destination 
+         [[ "$OPTARG" =~ ^(127.0.0.1|localhost)$ ]] && echo "Destination can't be localhost" && exit || DESTINATION=("$OPTARG")
          ;;
       P) #PROTOCOL 
          [[ ! "$OPTARG" =~ ^(ICMP|icmp|TCP|tcp|UDP|udp)$ ]] && echo "Wrong protocol" && exit || PROTOCOL=$(echo $OPTARG | awk '{print tolower($0)}')
@@ -62,12 +62,12 @@ function check_network_flow {
 
 function check_listen_port {
         [[ "$2" =~ ^(ICMP|icmp)$ ]] && return 0
-        SSH_CMD="sudo -u ssh_user ssh ssh_user@$1"
+        F_SSH_CMD="sudo -u ssh_user ssh ssh_user@$1"
         #$SSH_CMD $NETSTAT_CMD -tulan | grep $PROTOCOL | egrep "(0.0.0.0:|:::|$HOST:)" | egrep ":$PORT\s" | grep LISTEN
-        $SSH_CMD $NETSTAT_CMD -tulan | grep $2 | egrep "(0.0.0.0:|:::|$1:)" | egrep ":$3\s" && return 0 || return 1
+        $F_SSH_CMD $NETSTAT_CMD -tulan | grep $2 | egrep "(0.0.0.0:|:::|$1:)" | egrep ":$3\s" && return 0 || return 1
 }
 
-function create_listen_post {
+function create_listen_port {
         F_SSH_CMD="sudo -u ssh_user ssh ssh_user@$1"
         F_PROTOCOL=$2
         F_PORT=$3
@@ -103,7 +103,7 @@ if check_network_flow $DESTINATION ; then
                 CHECK_CMD="$NC_CMD -vz -u"
                 ;;
         esac
-        check_listen_port $DESTINATION $PROTOCOL $PORT && $SSH_CMD $CHECK_CMD $DESTINATION $PORT || echo create_listen_post $DESTINATION $PROTOCOL $PORT
+        check_listen_port $DESTINATION $PROTOCOL $PORT && $SSH_CMD $CHECK_CMD $DESTINATION $PORT || echo create_listen_port $DESTINATION $PROTOCOL $PORT
         else
         #cas check port remote
         #cas tcp/udp sudo -u ssh_user ssh ssh_user@10.25.12.240 /usr/bin/env netstat -tulan | awk  '$1 ~ "udp" && $4 ~ /(0.0.0.0:68|:::68|10.25.12.240:68)/ && $5 ~ /(0.0.0.0:*|:::*)/'
