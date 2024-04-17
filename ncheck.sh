@@ -17,6 +17,7 @@ Help()
    echo
 }
 DESTINATION=""
+SUDO_CMD="/usr/bin/env sudo -u ssh_user"
 SSH_CMD=""
 NETSTAT_CMD="/usr/bin/env netstat"
 IP_CMD="/usr/bin/env ip"
@@ -62,28 +63,33 @@ function check_network_flow {
 
 function check_listen_port {
         [[ "$2" =~ ^(ICMP|icmp)$ ]] && return 0
-        F_SSH_CMD="sudo -u ssh_user ssh ssh_user@$1"
+        F_SSH_CMD="$SUDO_CMD ssh ssh_user@$1"
         #$SSH_CMD $NETSTAT_CMD -tulan | grep $PROTOCOL | egrep "(0.0.0.0:|:::|$HOST:)" | egrep ":$PORT\s" | grep LISTEN
         $F_SSH_CMD $NETSTAT_CMD -tulan | grep $2 | egrep "(0.0.0.0:|:::|$1:)" | egrep ":$3\s" && return 0 || return 1
 }
 
 function create_listen_port {
-        F_SSH_CMD="sudo -u ssh_user ssh ssh_user@$1"
+        F_SSH_CMD="$SUDO_CMD ssh ssh_user@$1"
+        [[ $DESTINATION == "$(localhost_to_primary_ip)" ]] && F_SSH_CMD="$SUDO_CMD"
         F_PROTOCOL=$2
         F_PORT=$3
         sleep 1 && $SSH_CMD $CHECK_CMD $DESTINATION $PORT 2> /dev/null &
-        result=$($F_SSH_CMD "sudo tcpdump -c 1 -n "src host $HOST and dst port $F_PORT and $F_PROTOCOL" 2> /dev/null && echo ok")
+        #result=$($F_SSH_CMD "sudo tcpdump -c 1 -n "src host $HOST and dst port $F_PORT and $F_PROTOCOL" 2> /dev/null && echo ok")
+        result=$($F_SSH_CMD sudo tcpdump -c 1 -n src host $HOST and dst port $F_PORT and $F_PROTOCOL 2> /dev/null && echo ok)
         echo $result
 #       $F_SSH_CMD "sudo tcpdump -c 1 -n "src host $HOST and dst port $F_PORT and $F_PROTOCOL" && echo ok" & 
 #       sleep 1 && $SSH_CMD $CHECK_CMD $DESTINATION $PORT
 
 }
-
+function localhost_to_primary_ip {
+        echo $(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1')
+}
 if check_if_host_is_local $HOST; then
         HOST_IS_LOCAL=1
+        HOST=$(localhost_to_primary_ip)
 else
         HOST_IS_LOCAL=0
-        SSH_CMD="sudo -u ssh_user ssh ssh_user@$HOST"
+        SSH_CMD="$SUDO_CMD ssh ssh_user@$HOST"
 fi
 
 
@@ -107,7 +113,8 @@ if check_network_flow $DESTINATION ; then
                 CHECK_CMD="$NC_CMD -vz -u"
                 ;;
         esac
-        check_listen_port $DESTINATION $PROTOCOL $PORT && $SSH_CMD $CHECK_CMD $DESTINATION $PORT || create_listen_port $DESTINATION $PROTOCOL $PORT
+        #check_listen_port $DESTINATION $PROTOCOL $PORT && $SSH_CMD $CHECK_CMD $DESTINATION $PORT || create_listen_port $DESTINATION $PROTOCOL $PORT
+        $SSH_CMD $CHECK_CMD $DESTINATION $PORT || create_listen_port $DESTINATION $PROTOCOL $PORT
         else
         #cas check port remote
         #cas tcp/udp sudo -u ssh_user ssh ssh_user@10.25.12.240 /usr/bin/env netstat -tulan | awk  '$1 ~ "udp" && $4 ~ /(0.0.0.0:68|:::68|10.25.12.240:68)/ && $5 ~ /(0.0.0.0:*|:::*)/'
