@@ -21,11 +21,13 @@ DESTINATION=""
 ENV_CMD="/usr/bin/env"
 SUDO_CMD="$ENV_CMD sudo -u ssh_user"
 SSH_CMD=""
+SSH_OPT="-o ConnectTimeout=1"
 NETSTAT_CMD="$ENV_CMD netstat"
 IP_CMD="$ENV_CMD ip a"
 AWK_CMD="$ENV_CMD awk"
 PING_CMD="$ENV_CMD ping -c 1 -W 1"
 NC_CMD="$ENV_CMD nc"
+NC_OPT="-w 0.1"
 
 
 #color
@@ -70,13 +72,13 @@ function check_if_host_is_local {
 }
 
 function create_listen_port {
-        F_SSH_CMD="$SUDO_CMD ssh ssh_user@$1"
+        F_SSH_CMD="$SUDO_CMD ssh ssh_user@$1 $SSH_OPT"
         F_PROTOCOL=$2
         F_PORT=$3
         [[ $DESTINATION == "$(localhost_to_primary_ip)" ]] && F_SSH_CMD="$SUDO_CMD"
         [[ "$F_PROTOCOL" =~ ^(ICMP|icmp)$ ]] && DST_FILTER="$F_PROTOCOL" || DST_FILTER="dst port $F_PORT and $F_PROTOCOL"
         sleep 1 && result_tcpdump_network=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 &) &
-        result_tcpdump=$(timeout 3 $F_SSH_CMD sudo tcpdump -c 1 -n src host $HOST and $DST_FILTER 2> /dev/null)
+        result_ssh_connection=$($F_SSH_CMD -v "exit" 2>&1) && result_tcpdump=$(timeout 3 $F_SSH_CMD sudo tcpdump -c 1 -n src host $HOST and $DST_FILTER 2> /dev/null)
 }
 
 function localhost_to_primary_ip {
@@ -88,16 +90,20 @@ function display_result {
         F_result_tcpdump=$2
         F_result_port=$3
         F_result_ping=$4
+        F_result_ssh_connection=$5
 #       if [[ "$F_result_network_flow" =~ (1 received|Connected to|refused) ]] || [[ ! -z "$F_result_port" ]] || [[ ! -z "$F_result_ping" ]]; then
                 [[ "$PROTOCOL" =~ ^(ICMP|icmp)$ ]] && PORT="PONG"
-                if [[ ! -z $F_result_tcpdump ]] || [[ "$F_result_network_flow" =~ (refused) ]] ; then
-                        ARROW="${GREEN}-->${NC}"
+                if [[ ! -z $F_result_tcpdump ]] && [[ "$F_result_network_flow" =~ (refused) ]] ; then
+                        ARROW="${GREEN}--->${NC}"
                         PORT_COLOR="${RED}$PORT${NC}"
                 elif [[ "$F_result_network_flow" =~ (1 received|Connected to) ]] || [[ "$F_result_ping" =~ (1 received) ]] || [[ ! -z "$F_result_port" ]]; then
-                        ARROW="${GREEN}-->${NC}"
+                        ARROW="${GREEN}--->${NC}"
                         PORT_COLOR="${GREEN}$PORT${NC}"
+                elif [[ ! "$F_result_ssh_connection" =~ (debug1: Exit status 0) ]]; then
+                        ARROW="${WHITE}-?->${NC}"
+                        PORT_COLOR="${RED}$PORT${NC}"
                 else
-                        ARROW="${RED}-->${NC}"
+                        ARROW="${RED}--->${NC}"
                         PORT_COLOR="${RED}$PORT${NC}"
                 fi
                 if [[ ! -z "$DESTINATION" ]]; then
@@ -115,7 +121,7 @@ if check_if_host_is_local $HOST; then
         HOST=$(localhost_to_primary_ip)
 else
         HOST_IS_LOCAL=0
-        SSH_CMD="$SUDO_CMD ssh ssh_user@$HOST"
+        SSH_CMD="$SUDO_CMD ssh ssh_user@$HOST $SSH_OPT"
 fi
 
 #cas check network flow from X to Y
@@ -130,12 +136,12 @@ if [[ ! -z $DESTINATION ]] ; then
                 TCP|tcp)
                 #remote 10.25.12.240>10.25.15.133 tcp 22
                 # sudo -u ssh_user ssh 'ssh_user@10.25.12.240' "nc -vz 10.25.15.133 22"
-                CHECK_CMD="$NC_CMD -vz"
+                CHECK_CMD="$NC_CMD -vz $NC_OPT"
                 ;;
                 UDP|udp)
                 #remote 10.25.12.240>10.25.15.133 udp 161
                 # sudo -u ssh_user ssh 'ssh_user@10.25.12.240' "nc -vz -u 10.25.15.133 161"
-                CHECK_CMD="$NC_CMD -vz -u"
+                CHECK_CMD="$NC_CMD -vz -u $NC_OPT"
                 ;;
         esac
         result_network_flow=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 ) || create_listen_port $DESTINATION $PROTOCOL $PORT
@@ -147,6 +153,7 @@ else
 fi
  [[ $DEBUG == 1 ]] && [[ ! -z $result_port ]] && echo "PORT RESULT: " $result_port 
  [[ $DEBUG == 1 ]] && [[ ! -z $result_ping ]] && echo "PING RESULT: " $result_ping 
+ [[ $DEBUG == 1 ]] && [[ ! -z $result_ssh_connection ]] && echo "SSH RESULT: "  && echo $result_ssh_connection
  [[ $DEBUG == 1 ]] && [[ ! -z $result_network_flow ]] && echo "NETFLOW RESULT: " $result_network_flow 
  [[ $DEBUG == 1 ]] && [[ ! -z $result_tcpdump ]] && echo "TCPDUMP RESULT: "  $result_tcpdump
-display_result "$result_network_flow" "$result_tcpdump" "$result_port" "$result_ping"
+display_result "$result_network_flow" "$result_tcpdump" "$result_port" "$result_ping" "$result_ssh_connection"
