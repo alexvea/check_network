@@ -79,6 +79,7 @@ function create_listen_port {
         [[ "$F_PROTOCOL" =~ ^(ICMP|icmp)$ ]] && DST_FILTER="$F_PROTOCOL" || DST_FILTER="dst port $F_PORT and $F_PROTOCOL"
         sleep 1 && result_tcpdump_network=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 &) &
         result_ssh_connection=$($F_SSH_CMD -v "exit" 2>&1) && result_tcpdump=$(timeout 3 $F_SSH_CMD sudo tcpdump -c 1 -n src host $HOST and $DST_FILTER 2> /dev/null)
+        [[ $result_ssh_connection =~ (debug1: Exit status 0) ]] && result_port=`$SSH_CMD $NETSTAT_CMD -tulan | $AWK_CMD -v proto="$PROTOCOL" -v host="$HOST" -v port="$PORT"$ '$1 ~ proto && $4 ~ ("0.0.0.0:"port"|:::"port"|"host":"port) && $5 ~ ("0.0.0.0:*|:::*")'`
 }
 
 function localhost_to_primary_ip {
@@ -91,17 +92,19 @@ function display_result {
         F_result_port=$3
         F_result_ping=$4
         F_result_ssh_connection=$5
-#       if [[ "$F_result_network_flow" =~ (1 received|Connected to|refused) ]] || [[ ! -z "$F_result_port" ]] || [[ ! -z "$F_result_ping" ]]; then
                 [[ "$PROTOCOL" =~ ^(ICMP|icmp)$ ]] && PORT="PONG"
-                if [[ ! -z $F_result_tcpdump ]] && [[ "$F_result_network_flow" =~ (refused) ]] ; then
+                if [[ ! -z $F_result_tcpdump ]] && [[ "$F_result_network_flow" =~ (refused|0 received) ]] ; then
                         ARROW="${GREEN}--->${NC}"
                         PORT_COLOR="${RED}$PORT${NC}"
-                elif [[ "$F_result_network_flow" =~ (1 received|Connected to) ]] || [[ "$F_result_ping" =~ (1 received) ]] || [[ ! -z "$F_result_port" ]]; then
+                elif [[ "$F_result_network_flow" =~ (1 received|Connected to) ]] || [[ "$F_result_ping" =~ (1 received) ]]; then
                         ARROW="${GREEN}--->${NC}"
                         PORT_COLOR="${GREEN}$PORT${NC}"
                 elif [[ ! "$F_result_ssh_connection" =~ (debug1: Exit status 0) ]]; then
                         ARROW="${WHITE}-?->${NC}"
                         PORT_COLOR="${RED}$PORT${NC}"
+                elif [[ "$F_result_ssh_connection" =~ (debug1: Exit status 0) ]] && [[ ! -z "$F_result_port" ]]; then
+                        ARROW="${RED}--->${NC}"
+                        PORT_COLOR="${GREEN}$PORT${NC}"
                 else
                         ARROW="${RED}--->${NC}"
                         PORT_COLOR="${RED}$PORT${NC}"
@@ -113,7 +116,6 @@ function display_result {
                 fi
                 PORT_CONTENT=$PORT_COLOR
                 echo -e "$HOST$DESTINATION_CONTENT/$PROTOCOL:$PORT_CONTENT"
-#       fi
 }
 
 if check_if_host_is_local $HOST; then
@@ -144,7 +146,7 @@ if [[ ! -z $DESTINATION ]] ; then
                 CHECK_CMD="$NC_CMD -vz -u $NC_OPT"
                 ;;
         esac
-        result_network_flow=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 ) || create_listen_port $DESTINATION $PROTOCOL $PORT
+        result_network_flow=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 ) || create_listen_port $DESTINATION $PROTOCOL $PORT 
 else
         #cas check port remote
         #cas tcp/udp sudo -u ssh_user ssh ssh_user@10.25.12.240 /usr/bin/env netstat -tulan | awk  '$1 ~ "udp" && $4 ~ /(0.0.0.0:68|:::68|10.25.12.240:68)/ && $5 ~ /(0.0.0.0:*|:::*)/'
