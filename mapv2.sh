@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Function to execute ncheck command and update result in the network map
 PROTOCOL_PORT_REGEX='(TCP|UDP):+[0-9]+|ICMP'
 execute_ncheck() {
@@ -17,11 +17,10 @@ execute_ncheck() {
         network_flow_status=$(echo "$ncheck_result" | awk -F '/' '{print $1}')
         port_status=$(echo "$ncheck_result" | awk -F '/' '{print $2}')
         # Update ASCII map based on network flow and port status
-            [[ $protocol =~ ICMP ]] && updated_segment=$(colorize_check_result "$line" "$port_status" "$protocol") || updated_segment=$(colorize_check_result "$line" "$port_status" "$protocol:$port")
-            updated_segment_second=$(colorize_check_result "$second_line" "$network_flow_status" "$arrow")
+        [[ $protocol =~ ICMP ]] && updated_segment=$(colorize_check_result "$line" "$port_status" "$protocol") || updated_segment=$(colorize_check_result "$line" "$port_status" "$protocol:$port")
+        updated_segment_second=$(colorize_check_result "$second_line" "$network_flow_status" "$arrow")
 
         # Update the line with the updated segment and write it back to the ASCII map
-        #updated_line=$(printf "%s$arrow_index%s" "${updated_segments[@]}")
         updated_protocolport_line=$(echo "${updated_segment#*:}")
         updated_connection_line=$(echo "${updated_segment_second#*-}")
         result_connection_line_number=$(expr ${result_protocolport_line_number} + 1)
@@ -48,7 +47,6 @@ function get_host_from_map() {
                 [[ ${#HOST_POS} -ne 0 ]] && [[ ${#HOST_POS} -gt ${#PROTO_PORT_POS} ]] && [[ -z $HOST_H ]] && HOST_H=${HOST} && host_line="" && HOST_POS=""
                 [[ ${#HOST_POS} -ne 0 ]] && [[ ${#HOST_POS} -lt ${#PROTO_PORT_POS} ]] && [[ -z $HOST_D ]] && HOST_D=${HOST} && host_line="" && HOST_POS=""
         done
-
                 line_number_up=$((line_number_up-1))
                 line_number_down=$((line_number_down+2))
         done
@@ -62,7 +60,6 @@ function get_host_from_map() {
                 HOST_POS=""
                 HOST_H=""
                 HOST_D=""
-
 }
 
 # Function to parse ASCII network map and extract connections with coordinates
@@ -130,7 +127,6 @@ colorize_check_result() {
     local colored_value="${color_code}$value"
     # Return the updated segment with colorized elements
     echo "$(echo "$segment" | sed "s/\($value\)/$colored_value${WHITE}/")"
-   
 }
 
 # Main script starts here
@@ -142,6 +138,7 @@ fi
 network_map_file=$1
 network_map_file2=$network_map_file".modified"
 cp $network_map_file  $network_map_file2
+sed -i "s/#template/#real-time/g" $network_map_file2
 # Check if debug mode is enabled
 if [[ $2 == "-d" ]]; then
     DEBUG_MODE=true
@@ -149,4 +146,4 @@ fi
 
 # Parse the ASCII network map and execute ncheck commands
 parse_network_map "$network_map_file" &
-watch -n 1 -c cat $network_map_file".modified"
+watch -t -n 1 -c cat $network_map_file".modified"
