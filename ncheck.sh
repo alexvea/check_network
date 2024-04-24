@@ -6,7 +6,7 @@ Help()
 {
    # Display Help
    echo "The script will help to check port/network flow and UDP/TCP/ICMP protocol."
-   echo "Syntax: [-h|-H|-D|-P|-p|-d]"
+   echo "Syntax: [-h|-H|-D|-P|-p|-d|-s]"
    echo "options:"
    echo "-h     Print this help."
    echo "-d     Display debug."
@@ -14,6 +14,7 @@ Help()
    echo "-D     ip/dns of destination host." 
    echo "-P     protocol ICMP/TCP/UDP."
    echo "-p     port"
+   echo "-s     for script output"
    echo
 }
 #set -e
@@ -39,13 +40,16 @@ BLUE=$'\033[0;34m'
 PURPLE=$'\033[0;35m'
 WHITE=$'\033[1;37m'
 
-while getopts "hdH:D:P:p:" option; do
+while getopts "hdsH:D:P:p:" option; do
    case $option in
       h) # display Help
          Help
          exit;;
       d) #display debug
          DEBUG=1
+         ;;
+      s) #for script output
+         SCRIPT_OUTPUT=1
          ;;
       H) #host 
          HOST=("$OPTARG")
@@ -92,6 +96,8 @@ function display_result {
         F_result_port=$3
         F_result_ping=$4
         F_result_ssh_connection=$5
+        local Network_flow_result=""
+        local Port_result=""
                 [[ "$PROTOCOL" =~ ^(ICMP|icmp)$ ]] && PORT="PONG"
                 if [[ ! -z $F_result_tcpdump ]] && [[ "$F_result_network_flow" =~ (refused|0 received) ]] ; then
                         ARROW="${GREEN}--->${NC}"
@@ -99,12 +105,14 @@ function display_result {
                 elif [[ "$F_result_network_flow" =~ (1 received|Connected to) ]] || [[ "$F_result_ping" =~ (1 received) ]]; then
                         ARROW="${GREEN}--->${NC}"
                         PORT_COLOR="${GREEN}$PORT${NC}"
-                elif [[ ! "$F_result_ssh_connection" =~ (debug1: Exit status 0) ]]; then
-                        ARROW="${WHITE}-?->${NC}"
-                        PORT_COLOR="${RED}$PORT${NC}"
                 elif [[ "$F_result_ssh_connection" =~ (debug1: Exit status 0) ]] && [[ ! -z "$F_result_port" ]]; then
                         ARROW="${RED}--->${NC}"
                         PORT_COLOR="${GREEN}$PORT${NC}"
+                elif [[ ! -z "$F_result_port" ]]; then
+                        PORT_COLOR="${GREEN}$PORT${NC}"
+                elif [[ ! "$F_result_ssh_connection" =~ (debug1: Exit status 0) ]] ; then
+                        ARROW="${WHITE}-?->${NC}"
+                        PORT_COLOR="${RED}$PORT${NC}"
                 else
                         ARROW="${RED}--->${NC}"
                         PORT_COLOR="${RED}$PORT${NC}"
@@ -115,7 +123,14 @@ function display_result {
                         DESTINATION_CONTENT=""
                 fi
                 PORT_CONTENT=$PORT_COLOR
+                if [[ $SCRIPT_OUTPUT == 1 ]]; then
+                [[ $ARROW == "${GREEN}--->${NC}" ]] && Network_flow_result="OK" || Network_flow_result="NOK"
+                [[ $PORT_COLOR == "${GREEN}$PORT${NC}" ]] && Port_result="OK" || Port_result="NOK"
+                [[ $ARROW == "${WHITE}-?->${NC}" ]] && Network_flow_result="UNKNOWN"
+                echo $Network_flow_result/$Port_result
+                else
                 echo -e "$HOST$DESTINATION_CONTENT/$PROTOCOL:$PORT_CONTENT"
+                fi
 }
 
 if check_if_host_is_local $HOST; then
