@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # Function to execute ncheck command and update result in the network map
 PROTOCOL_PORT_REGEX='(TCP|UDP):+[0-9]+|ICMP'
 execute_ncheck() {
@@ -38,7 +38,7 @@ get_host_from_map() {
         line_number_up=$line_number
         line_number_down=$line_number
         PROTO_PORT_POS=${check_line#*$protocol}
-        while [[ "$line_number_up" -gt 6 ]] || [[ -z "HOST_H" && -z "$HOST_D" ]]; do
+        while [[ "$line_number_up" -gt 0 ]] || [[ -z "HOST_H" && -z "$HOST_D" ]]; do
         for host in $hosts; do
                 local HOST=${host%%=*}
                 host_line=$(sed "$line_number_up","$line_number_down"'!d' $network_map_file | grep -n ${HOST})
@@ -79,9 +79,8 @@ parse_network_map() {
                     protocol_port=($(echo "$segment" | grep -oP $PROTOCOL_PORT_REGEX))
                     protocol=$(echo "$protocol_port" | grep -oP '(TCP|UDP|ICMP)')
                     port=$(echo "$protocol_port" | awk -F":" '{print $2}')
-                    get_host_from_map "$line"
                     result_line_number=$(echo "$line" | cut -d: -f1)
-                    execute_ncheck "$ncheck_command" "$result_line_number" "$network_map_file" &
+                    get_host_from_map "$line" && execute_ncheck "$ncheck_command" "$result_line_number" "$network_map_file" &
                 fi
         fi
     done <<< "$connections"
@@ -127,5 +126,7 @@ if [[ $2 == "-d" ]]; then
     parse_network_map "$network_map_file" && sleep 3 && cat $network_map_file".modified"
 else
     parse_network_map "$network_map_file" &
-    watch -t -n 1 -c cat $network_map_file".modified"
+    watch -t -n 1 -c cat $network_map_file".modified" 
 fi
+
+rm $network_map_file".modified"
