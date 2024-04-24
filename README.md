@@ -18,8 +18,10 @@ nc, tcpdump, netstat
 ````bash
  ./ncheck.sh  -H "10.25.15.133" -D "10.25.12.240" -P "TCP" -p "1234"
 ````
-result : 
-![image](https://github.com/alexvea/check_network/assets/35368807/df97e991-5e71-4f2e-bb5a-ff433f622e99)
+example of result : 
+![image](https://github.com/alexvea/check_network/assets/35368807/fc267b12-e15f-48b2-abea-74e6f4fd6c85)
+
+
 
 
 ## Help :
@@ -48,7 +50,8 @@ Can check :
  ./mapv2.sh networkV2.template 
 ````
 result :
-![image](https://github.com/alexvea/check_network/assets/35368807/a8371550-183d-443c-84ce-394bd63344fe)
+![image](https://github.com/alexvea/check_network/assets/35368807/fbbc4b04-7433-4129-8c1b-ba2ba83ec5d1)
+
 
 ## How to create you own ascii map : 
 
@@ -56,8 +59,31 @@ Go to this website : https://asciiflow.com/#/
 
 ## Not yet functionning : 
 
-- ascii map with more than horizontal 2 servers
-  
+- ascii map with more than 2 servers in horizontal way, example :
+
+````
++---------------------------------+                                                                       
+|                                 |                                                                       
+|  Central=10.25.15.133           |                                                                       
+|  Mariadb=10.25.15.133           |                                                                       
+|  ServerC=10.25.15.133           |                                                                       
+|                                 |                                                                       
+|                                 |                                                                       
++---------------------------------+                                                                       
+                                                                                                          
+                                                                                                        
+                                                  +-----------------+     ICMP         +-----------------+
+ +--------------------+    TCP:3306               |                 +------------------>                 |
+ |                    +--------------------------->                 |                  |                 |
+ |                    |    TCP:22                 |                 |                  |                 |
+ |                    +--------------------------->   Mariadb       |                  |   Poller        |
+ |                    |                           |                 |     UDP:161      |                 |
+ |     Central        |    TCP:22                 |                 <------------------+                 |
+ |                    <---------------------------+                 |                  |                 |
+ |                    |                           |                 |                  |                 |
+ |                    |                           +-----------------+                  +-----------------+
+ +--------------------+                                                                                   
+  ````
 
 
 
