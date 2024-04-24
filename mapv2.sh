@@ -125,8 +125,12 @@ if [[ $2 == "-d" ]]; then
     DEBUG_MODE=true
     parse_network_map "$network_map_file" && sleep 3 && cat $network_map_file".modified"
 else
-    parse_network_map "$network_map_file" &
-    watch -t -n 1 -c cat $network_map_file".modified" 
+        while :
+        do
+                parse_network_map "$network_map_file" &
+                watch -t -n 1 -c cat $network_map_file".modified" &
+                sleep 5
+        done
 fi
 
 rm $network_map_file".modified"
