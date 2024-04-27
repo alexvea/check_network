@@ -1,7 +1,7 @@
 # check_network
 
 ## Description :
-This bash script will allow to check the protocol/port and network flow on a ascii map.
+Theses bash scripts will allow to check the protocol/port and network flow on a ascii map.
 
 ## Prerequisites :
 create an linux user called ssh_user on current server and remote server
