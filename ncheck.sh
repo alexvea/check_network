@@ -160,7 +160,6 @@ if [[ ! -z $DESTINATION ]] ; then
                 UDP|udp)
                 #remote 10.25.12.240>10.25.15.133 udp 161
                 # sudo -u ssh_user ssh 'ssh_user@10.25.12.240' "nc -vz -u 10.25.15.133 161"
-                #CHECK_CMD="$NC_CMD -vz -u $NC_OPT"
                 CHECK_CMD="$NC_CMD -vz -u $NC_OPT" && create_listen_port $DESTINATION $PROTOCOL $PORT && result_network_flow=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 )
                 ;;
         esac
