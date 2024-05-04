@@ -1,0 +1,57 @@
+{
+  "config": [
+    {
+      "servers": [
+        {
+          "id": 1,
+          "name": "Central",
+          "ip": "10.25.15.133"
+        },
+        {
+          "id": 2,
+          "name": "Docker",
+          "ip": "10.25.15.161"
+        },
+        {
+          "id": 3,
+          "name": "MBI",
+          "ip": "10.25.12.240"
+        }
+      ]
+    },
+    {
+      "links": [
+        {
+          "src_id": 1,
+          "dst_id": 2,
+          "protocol": "TCP",
+          "port": "22"
+        },
+        {
+          "src_id": 2,
+          "dst_id": 1,
+          "protocol": "TCP",
+          "port": "22"
+        },
+        {
+          "src_id": 2,
+          "dst_id": 1,
+          "protocol": "UDP",
+          "port": "161"
+        },
+        {
+          "src_id": 2,
+          "dst_id": 1,
+          "protocol": "TCP",
+          "port": "80"
+        },
+        {
+          "src_id": 1,
+          "dst_id": 3,
+          "protocol": "ICMP",
+          "port": null
+        }
+      ]
+    }
+  ]
+}
