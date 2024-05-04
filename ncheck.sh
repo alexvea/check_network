@@ -149,19 +149,21 @@ if [[ ! -z $DESTINATION ]] ; then
                 #sudo -u ssh_user ssh 'ssh_user@10.25.12.240' "ping -c 1 10.25.15.133 &> /dev/null"
                 CHECK_CMD="$PING_CMD"
                 PORT=""
+                result_network_flow=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 ) || create_listen_port $DESTINATION $PROTOCOL $PORT 
                 ;;
                 TCP|tcp)
                 #remote 10.25.12.240>10.25.15.133 tcp 22
                 # sudo -u ssh_user ssh 'ssh_user@10.25.12.240' "nc -vz 10.25.15.133 22"
                 CHECK_CMD="$NC_CMD -vz $NC_OPT"
+                result_network_flow=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 ) || create_listen_port $DESTINATION $PROTOCOL $PORT 
                 ;;
                 UDP|udp)
                 #remote 10.25.12.240>10.25.15.133 udp 161
                 # sudo -u ssh_user ssh 'ssh_user@10.25.12.240' "nc -vz -u 10.25.15.133 161"
-                CHECK_CMD="$NC_CMD -vz -u $NC_OPT"
+                #CHECK_CMD="$NC_CMD -vz -u $NC_OPT"
+                CHECK_CMD="$NC_CMD -vz -u $NC_OPT" && create_listen_port $DESTINATION $PROTOCOL $PORT && result_network_flow=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 )
                 ;;
         esac
-        result_network_flow=$($SSH_CMD $CHECK_CMD $DESTINATION $PORT 2>&1 ) || create_listen_port $DESTINATION $PROTOCOL $PORT 
 else
         #cas check port remote
         #cas tcp/udp sudo -u ssh_user ssh ssh_user@10.25.12.240 /usr/bin/env netstat -tulan | awk  '$1 ~ "udp" && $4 ~ /(0.0.0.0:68|:::68|10.25.12.240:68)/ && $5 ~ /(0.0.0.0:*|:::*)/'
