@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 json_config=$1
-generated_template=./generated_map.template
+generated_template=generated_map.template
 
 st_end_conf_box="+---------------------------------+"
 middle_conf_box="|                                 |"
@@ -40,11 +40,14 @@ get_server_name_from_id() {
 begin_two_box_part() {
         local number_of_caracter_to_add=$((${#st_end_map_box} * 2))
         printf '%s%*s \n' "$st_end_map_box" "$number_of_caracter_to_add" "$st_end_map_box"
+#       printf '%s%*s \n' "$middle_map_box" "$number_of_caracter_to_add" "$middle_map_box"
 }
 
 end_two_box_part() {
         local number_of_caracter_to_add=$((${#st_end_map_box} * 2))
+#       printf '%s%*s\n' "$middle_map_box" "$number_of_caracter_to_add" "$middle_map_box"
         printf '%s%*s\n' "$st_end_map_box" "$number_of_caracter_to_add" "$st_end_map_box"
+        printf "\n" 
 }
 
 map_two_box() {
@@ -80,10 +83,10 @@ map_list_links() {
                 new_list_link=$(echo "$1" | grep -Pv "^(?=.*src_id\":($src_id|$dst_id))(?=.*dst_id\":($src_id|$dst_id))")
                 map_two_box "$(echo "$1" | grep -P "^(?=.*src_id\":($src_id|$dst_id))(?=.*dst_id\":($src_id|$dst_id))")"
                 map_list_links "$new_list_link"
-                exit
+                break
         done
 }
 
-list_server_config_part
+list_server_config_part 
 
-map_list_links "$(cat "$json_config" | jq -c '.config[1].links[]')"
+map_list_links "$(cat "$json_config" | jq -c '.config[1].links[]')" 
