@@ -55,8 +55,84 @@ result :
 
 ## How to create you own ascii map : 
 
-Go to this website : https://asciiflow.com/#/
+1)Go to this website : https://asciiflow.com/#/
 
+2)Or, use generate_map.sh with a map.json :
+
+map.json
+````
+{
+  "config": [
+    {
+      "servers": [
+        {
+          "id": 1,
+          "name": "Central",
+          "ip": "10.25.15.133"
+        },
+        {
+          "id": 2,
+          "name": "Docker",
+          "ip": "10.25.15.161"
+        }
+      ]
+    },
+    {
+      "links": [
+        {
+          "src_id": 1,
+          "dst_id": 2,
+          "protocol": "TCP",
+          "port": "22"
+        },
+        {
+          "src_id": 1,
+          "dst_id": 2,
+          "protocol": "TCP",
+          "port": "9443"
+        },
+        {
+          "src_id": 1,
+          "dst_id": 2,
+          "protocol": "TCP",
+          "port": "8025"
+        },
+        {
+          "src_id": 1,
+          "dst_id": 2,
+          "protocol": "TCP",
+          "port": "1025"
+        }
+      ]
+    }
+  ]
+}
+````
+
+````
+./generate_map.sh map.json
+````
+result :
+````
+#template 
++---------------------------------+ 
+| Central=10.25.15.133            | 
+| Docker=10.25.15.161             | 
++---------------------------------+ 
+
+#map 
++------------------+                    +------------------+ 
+|                  |    TCP:22          |                  |
+|                  +-------------------->                  |
+|                  |  TCP:9443          |                  |
+|                  +-------------------->                  |
+|   Central        |                    |   Docker         |
+|                  |  TCP:8025          |                  |
+|                  +-------------------->                  |
+|                  |  TCP:1025          |                  |
+|                  +-------------------->                  |
++------------------+                    +------------------+
+````
 ## Not yet functionning : 
 
 - ascii map with more than 2 servers in horizontal way, example :
