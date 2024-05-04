@@ -28,7 +28,7 @@ execute_ncheck() {
 }
 get_host_ip() {
         local host=$1
-        host_ip=$(grep -w "$host" "$network_map_file" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
+        host_ip=$(grep -w "$host" "$network_map_file" | head -1 | grep -oE "$host=([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+|(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\-]*[A-Za-z0-9]))" | cut -d "=" -f2 )
         echo $host_ip
 }
 get_host_from_map() {
