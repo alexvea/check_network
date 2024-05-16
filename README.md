@@ -9,6 +9,9 @@ install a SSH key to authenticate as ssh_user, to be able to connect like :
 ````
 sudo -u ssh_user ssh ssh_user@remote_server 
 ````
+you can use this script to generate and install the ssh key to remote server : 
+https://github.com/centic9/generate-and-send-ssh-key
+
 install network tools on current server and remote server :
 ````
 nc, tcpdump, netstat
